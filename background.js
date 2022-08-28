@@ -27,6 +27,7 @@ function analyzeIncludesOnPage() {
     const aEl = document.createElement("a");
     aEl.setAttribute("target", "_blank");
     aEl.setAttribute("href", url);
+    aEl.classList = "gl-shadow-none! file-line-num";
     aEl.style = "margin-right: 8px";
 
     let imageEl = document.createElement("img");
@@ -41,7 +42,7 @@ function analyzeIncludesOnPage() {
 
     aEl.appendChild(imageEl);
 
-    document.getElementById(`L${index}`).before(aEl);
+    document.getElementById(`L${index}`).replaceWith(aEl);
   }
 
   function addSlashToURL(url) {
@@ -66,6 +67,10 @@ function analyzeIncludesOnPage() {
   }
 
   function createIncludedLink(type, url) {
+    if (url.includes("http://") || url.includes("https://")) {
+      return url;
+    }
+    
     url = removeTick(url);
     url = removeDoubleTick(url);
 
