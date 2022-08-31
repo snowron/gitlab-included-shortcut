@@ -108,20 +108,6 @@ function analyzeIncludesOnPage() {
     return `${host}${project}/-/blob/${ref || "master"}${file}`;
   }
 
-  function findLineNumber(value) {
-    let i = 1;
-    while (document.getElementById(`LC${i}`) !== null) {
-      const line = document.getElementById(`LC${i}`);
-      try {
-        if (line.innerText.includes(value)) {
-          return i;
-        }
-      } catch (error) {}
-
-      i++;
-    }
-  }
-
   async function process() {
     let i = 1;
     let yamlContent = "";
@@ -147,7 +133,6 @@ function analyzeIncludesOnPage() {
         } else if (!line.innerText.includes("include:")) {
           arrayOfProperties.simpleString.push(i);
         }
-        console.log(arrayOfProperties);
       } catch (error) {}
 
       i++;
