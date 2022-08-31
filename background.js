@@ -1,16 +1,22 @@
+var window = self;
+importScripts("./js-yaml.min.js");
+chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
+  const parsedYaml = self.jsyaml.load(message);
+  sendResponse(parsedYaml);
+});
 chrome.webNavigation.onCompleted.addListener(
-  async (e) => {
+  async function (e) {
     chrome.scripting.executeScript({
       target: {
         tabId: e.tabId,
       },
-      function: analyzeIncludesOnPage,
+      func: analyzeIncludesOnPage,
     });
   },
   {
     url: [
       {
-        hostSuffix: "gitlab.com",
+        hostContains: "gitlab",
       },
     ],
   }
@@ -52,8 +58,16 @@ function analyzeIncludesOnPage() {
     return url;
   }
 
+  function removeDoubleTick(url) {
+    if (url[0] === '"') {
+      return url.slice(1, -1);
+    }
+    return url;
+  }
+
   function createIncludedLink(type, url) {
     url = removeTick(url);
+    url = removeDoubleTick(url);
 
     const hostWithProjectName = window.location.href
       .split("/")
@@ -72,119 +86,150 @@ function analyzeIncludesOnPage() {
   }
 
   function createProjectIncludedLink(project, file, ref) {
-    project = removeTick(project);
-    project = addSlashToURL(project);
-    file = removeTick(file);
-    file = addSlashToURL(file);
+    if (project) {
+      project = removeTick(project);
+      project = removeDoubleTick(project);
+      project = addSlashToURL(project);
+    }
 
-    ref = removeTick(ref);
+    if (file) {
+      file = removeTick(file);
+      file = removeDoubleTick(file);
+      file = addSlashToURL(file);
+    }
+
+    if (ref) {
+      ref = removeTick(ref);
+      ref = removeDoubleTick(ref);
+    }
+
     const host = window.location.origin;
 
-    return `${host}${project}/-/blob/${ref}${file}`;
+    return `${host}${project}/-/blob/${ref || "master"}${file}`;
   }
 
-  function getLineAttr(id) {
-    return document.querySelector(`[id=LC${id}] > .hljs-attr`);
-  }
-
-  function getLineValue(id) {
-    return document.querySelector(`[id=LC${id}] > .hljs-string`);
-  }
-
-  function getLine(id) {
-    return document.querySelector(`[id=LC${id}]`);
-  }
-
-  function process() {
+  function findLineNumber(value) {
     let i = 1;
     while (document.getElementById(`LC${i}`) !== null) {
       const line = document.getElementById(`LC${i}`);
       try {
-        if (
-          line.textContent !== null &&
-          line.textContent.startsWith("include:") &&
-          line.textContent.endsWith("include:") !== true
-        ) {
-          addButtonToElement(
-            i,
-            createIncludedLink("local", getLineValue(i).textContent)
-          );
+        if (line.innerText.includes(value)) {
+          return i;
         }
+      } catch (error) {}
 
-        if (
-          !getLine(i).textContent.includes("file:") &&
-          getLineValue(i).textContent.startsWith("'https://")
-        ) {
-          addButtonToElement(
-            i,
-            createIncludedLink("remote", getLineValue(i).textContent)
-          );
-        } else if (
-          !getLine(i).textContent.includes("file:") &&
-          (getLineValue(i).textContent.startsWith("'/") ||
-            getLineValue(i).textContent.startsWith("/"))
-        ) {
-          addButtonToElement(
-            i,
-            createIncludedLink("local", getLineValue(i).textContent)
-          );
-        } else if (getLineAttr(i).textContent == "local:") {
-          addButtonToElement(
-            i,
-            createIncludedLink("local", getLineValue(i).textContent)
-          );
-        } else if (getLineAttr(i).textContent == "remote:") {
-          addButtonToElement(
-            i,
-            createIncludedLink("remote", getLineValue(i).textContent)
-          );
-        } else if (getLineAttr(i).textContent == "template:") {
-          addButtonToElement(
-            i,
-            createIncludedLink("template", getLineValue(i).textContent)
-          );
-        } else if (getLineAttr(i).textContent == "project:") {
-          let refValue = "";
-          let fileValue = "";
-          if (getLineAttr(i + 1).textContent == "ref:") {
-            refValue = getLineValue(i + 1).textContent;
-          }
-          try {
-            if (getLineAttr(i + 2).textContent == "ref:") {
-              refValue = getLineValue(i + 2).textContent;
-            }
-          } catch (error) {
-            refValue = "master";
-          }
-          if (getLineAttr(i + 1).textContent == "file:") {
-            fileValue = getLineValue(i + 1).textContent;
-          }
-          try {
-            if (getLineAttr(i + 2).textContent == "file:") {
-              fileValue = getLineValue(i + 2).textContent;
-            }
-          } catch (error) {}
-
-          addButtonToElement(
-            i,
-            createProjectIncludedLink(
-              getLineValue(i).textContent,
-              fileValue,
-              refValue
-            )
-          );
-        }
-      } catch (error) {
-        console.log(error.message);
-      }
       i++;
     }
   }
 
-  const isCodeContentLoaded = setInterval(() => {
-    if (document.getElementById("LC1") !== null) {
-      process();
-      clearInterval(isCodeContentLoaded)
+  async function process() {
+    let i = 1;
+    let yamlContent = "";
+    const arraySira = {
+      local: [],
+      remote: [],
+      template: [],
+      project: [],
+      simpleString: [],
+    };
+    while (document.getElementById(`LC${i}`) !== null) {
+      const line = document.getElementById(`LC${i}`);
+      try {
+        yamlContent += "\n" + line.innerText;
+        if (line.innerText.includes(" - local")) {
+          arraySira["local"].push(i);
+        } else if (line.innerText.includes(" - remote")) {
+          arraySira["remote"].push(i);
+        } else if (line.innerText.includes(" - template")) {
+          arraySira["template"].push(i);
+        } else if (line.innerText.includes(" - project")) {
+          arraySira["project"].push(i);
+        } else if (!line.innerText.includes("include:")) {
+          arraySira.simpleString.push(i);
+        }
+        console.log(arraySira);
+      } catch (error) {}
+
+      i++;
     }
-  }, 300);
+    const parsedYaml = await chrome.runtime.sendMessage(yamlContent);
+
+    if (parsedYaml.include.length > 0) {
+      for (const property of parsedYaml.include) {
+        try {
+          if (typeof property === "string") {
+            addButtonToElement(
+              arraySira.simpleString[0],
+              createIncludedLink("local", property)
+            );
+            arraySira.simpleString.shift();
+          } else if (typeof property === "object") {
+            if (property["local"]) {
+              addButtonToElement(
+                arraySira.local[0],
+                createIncludedLink("template", property["local"])
+              );
+              arraySira.local.shift();
+            } else if (property["template"]) {
+              addButtonToElement(
+                arraySira.template[0],
+
+                createIncludedLink("template", property["template"])
+              );
+              arraySira.template.shift();
+            } else if (property["remote"]) {
+              addButtonToElement(
+                arraySira.remote[0],
+                createIncludedLink("remote", property["remote"])
+              );
+              arraySira.remote.shift();
+            } else if (property["project"]) {
+              if (Array.isArray(property["file"])) {
+                for (const iterator of property["file"]) {
+                  addButtonToElement(
+                    arraySira.project[0],
+                    createProjectIncludedLink(
+                      property["project"],
+                      iterator,
+                      property["ref"]
+                    )
+                  );
+                }
+              } else {
+                addButtonToElement(
+                  arraySira.project[0],
+                  createProjectIncludedLink(
+                    property["project"],
+                    property["file"],
+                    property["ref"]
+                  )
+                );
+              }
+              arraySira.project.shift();
+            }
+          }
+        } catch (error) {}
+      }
+    }
+  }
+
+  if (
+    window.location.pathname.includes(".yml") ||
+    window.location.pathname.includes(".yaml")
+  ) {
+    const isCodeContentLoaded = setInterval(() => {
+      let i = 0;
+
+      if (document.getElementById("LC1") !== null) {
+        process();
+        clearInterval(isCodeContentLoaded);
+      }
+
+      if (i == 10) {
+        clearInterval(isCodeContentLoaded);
+      }
+
+      i++;
+    }, 300);
+  }
 }
