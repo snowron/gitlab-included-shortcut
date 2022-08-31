@@ -1,7 +1,7 @@
 var window = self;
 importScripts("./js-yaml.min.js");
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
-  const parsedYaml = self.jsyaml.load(message);
+  const parsedYaml = self.jsyaml.load(message, { json: true });
   sendResponse(parsedYaml);
 });
 chrome.webNavigation.onCompleted.addListener(
@@ -125,7 +125,7 @@ function analyzeIncludesOnPage() {
   async function process() {
     let i = 1;
     let yamlContent = "";
-    const arraySira = {
+    const arrayOfProperties = {
       local: [],
       remote: [],
       template: [],
@@ -137,17 +137,17 @@ function analyzeIncludesOnPage() {
       try {
         yamlContent += "\n" + line.innerText;
         if (line.innerText.includes(" - local")) {
-          arraySira["local"].push(i);
+          arrayOfProperties["local"].push(i);
         } else if (line.innerText.includes(" - remote")) {
-          arraySira["remote"].push(i);
+          arrayOfProperties["remote"].push(i);
         } else if (line.innerText.includes(" - template")) {
-          arraySira["template"].push(i);
+          arrayOfProperties["template"].push(i);
         } else if (line.innerText.includes(" - project")) {
-          arraySira["project"].push(i);
+          arrayOfProperties["project"].push(i);
         } else if (!line.innerText.includes("include:")) {
-          arraySira.simpleString.push(i);
+          arrayOfProperties.simpleString.push(i);
         }
-        console.log(arraySira);
+        console.log(arrayOfProperties);
       } catch (error) {}
 
       i++;
@@ -159,35 +159,35 @@ function analyzeIncludesOnPage() {
         try {
           if (typeof property === "string") {
             addButtonToElement(
-              arraySira.simpleString[0],
+              arrayOfProperties.simpleString[0],
               createIncludedLink("local", property)
             );
-            arraySira.simpleString.shift();
+            arrayOfProperties.simpleString.shift();
           } else if (typeof property === "object") {
             if (property["local"]) {
               addButtonToElement(
-                arraySira.local[0],
+                arrayOfProperties.local[0],
                 createIncludedLink("template", property["local"])
               );
-              arraySira.local.shift();
+              arrayOfProperties.local.shift();
             } else if (property["template"]) {
               addButtonToElement(
-                arraySira.template[0],
+                arrayOfProperties.template[0],
 
                 createIncludedLink("template", property["template"])
               );
-              arraySira.template.shift();
+              arrayOfProperties.template.shift();
             } else if (property["remote"]) {
               addButtonToElement(
-                arraySira.remote[0],
+                arrayOfProperties.remote[0],
                 createIncludedLink("remote", property["remote"])
               );
-              arraySira.remote.shift();
+              arrayOfProperties.remote.shift();
             } else if (property["project"]) {
               if (Array.isArray(property["file"])) {
                 for (const iterator of property["file"]) {
                   addButtonToElement(
-                    arraySira.project[0],
+                    arrayOfProperties.project[0],
                     createProjectIncludedLink(
                       property["project"],
                       iterator,
@@ -197,7 +197,7 @@ function analyzeIncludesOnPage() {
                 }
               } else {
                 addButtonToElement(
-                  arraySira.project[0],
+                  arrayOfProperties.project[0],
                   createProjectIncludedLink(
                     property["project"],
                     property["file"],
@@ -205,7 +205,7 @@ function analyzeIncludesOnPage() {
                   )
                 );
               }
-              arraySira.project.shift();
+              arrayOfProperties.project.shift();
             }
           }
         } catch (error) {}
