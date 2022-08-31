@@ -28,7 +28,13 @@ function analyzeIncludesOnPage() {
     aEl.setAttribute("target", "_blank");
     aEl.setAttribute("href", url);
     aEl.classList = "gl-shadow-none! file-line-num";
-    aEl.style = "margin-right: 8px";
+
+    const aElForLineId = document.createElement("a");
+    aElForLineId.setAttribute("target", "_blank");
+    aElForLineId.setAttribute("href", `#L${index}`);
+    aElForLineId.innerText = index;
+    aElForLineId.classList =
+      "file-line-num diff-line-num";
 
     let imageEl = document.createElement("img");
     imageEl.setAttribute(
@@ -42,7 +48,12 @@ function analyzeIncludesOnPage() {
 
     aEl.appendChild(imageEl);
 
-    document.getElementById(`L${index}`).replaceWith(aEl);
+    const divEl = document.createElement("div");
+    divEl.style = "display: flex; flex-grow: 1"
+    divEl.appendChild(aEl);
+    divEl.appendChild(aElForLineId);
+
+    document.getElementById(`L${index}`).replaceWith(divEl);
   }
 
   function addSlashToURL(url) {
@@ -70,7 +81,7 @@ function analyzeIncludesOnPage() {
     if (url.includes("http://") || url.includes("https://")) {
       return url;
     }
-    
+
     url = removeTick(url);
     url = removeDoubleTick(url);
 
