@@ -1,7 +1,7 @@
 {
   "name": "Gitlab Included Shortcut",
   "description": "It helps to open included yaml files in new tab with one click.",
-  "version": "1.3",
+  "version": "1.5",
   "manifest_version": 3,
   "background": {
     "service_worker": "background.js"
