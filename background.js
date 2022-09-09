@@ -33,8 +33,7 @@ function analyzeIncludesOnPage() {
     aElForLineId.setAttribute("target", "_blank");
     aElForLineId.setAttribute("href", `#L${index}`);
     aElForLineId.innerText = index;
-    aElForLineId.classList =
-      "file-line-num diff-line-num";
+    aElForLineId.classList = "file-line-num diff-line-num";
 
     let imageEl = document.createElement("img");
     imageEl.setAttribute(
@@ -49,7 +48,7 @@ function analyzeIncludesOnPage() {
     aEl.appendChild(imageEl);
 
     const divEl = document.createElement("div");
-    divEl.style = "display: flex; flex-grow: 1"
+    divEl.style = "display: flex; flex-grow: 1";
     divEl.appendChild(aEl);
     divEl.appendChild(aElForLineId);
 
@@ -153,6 +152,8 @@ function analyzeIncludesOnPage() {
 
       i++;
     }
+    console.log(arrayOfProperties.project);
+
     const parsedYaml = await chrome.runtime.sendMessage(yamlContent);
 
     if (parsedYaml.include.length > 0) {
@@ -186,12 +187,12 @@ function analyzeIncludesOnPage() {
               arrayOfProperties.remote.shift();
             } else if (property["project"]) {
               if (Array.isArray(property["file"])) {
-                for (const iterator of property["file"]) {
+                for (let index = 0; index < property["file"].length; index++) {
                   addButtonToElement(
-                    arrayOfProperties.project[0],
+                    arrayOfProperties.project[0] + index + 2,
                     createProjectIncludedLink(
                       property["project"],
-                      iterator,
+                      property["file"],
                       property["ref"]
                     )
                   );
