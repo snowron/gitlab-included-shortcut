@@ -152,7 +152,6 @@ function analyzeIncludesOnPage() {
 
       i++;
     }
-    console.log(arrayOfProperties.project);
 
     const parsedYaml = await chrome.runtime.sendMessage(yamlContent);
 
@@ -189,10 +188,10 @@ function analyzeIncludesOnPage() {
               if (Array.isArray(property["file"])) {
                 for (let index = 0; index < property["file"].length; index++) {
                   addButtonToElement(
-                    arrayOfProperties.project[0] + index + 2,
+                    arrayOfProperties.project[0] + index + 3,
                     createProjectIncludedLink(
                       property["project"],
-                      property["file"],
+                      property["file"][index],
                       property["ref"]
                     )
                   );
