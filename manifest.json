@@ -1,7 +1,8 @@
 {
-  "name": "Gitlab Included Shortcut",
-  "description": "It helps to open included yaml files in new tab with one click.",
-  "version": "1.8",
+  "name": "Included Shortcut for GitLab™",
+  "description": "Open included YAML files in GitLab CI/CD with one click. Not affiliated with GitLab Inc.",
+  "homepage_url": "https://github.com/user/included-shortcut-for-gitlab",
+  "version": "1.11",
   "manifest_version": 3,
   "background": {
     "service_worker": "background.js"
